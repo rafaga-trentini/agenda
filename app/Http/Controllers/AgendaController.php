@@ -7,15 +7,19 @@ use Illuminate\Http\Request;
 class AgendaController extends Controller
 {
 
+    protected $_SESSION;
+
     /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
-    public function index(Request $request)
+    public function index()
     {
-        $valor = $request->session()->all();
-        return $valor;
+        if (!isset($_SESSION)) {
+            session_start();
+        }
+        return view("agenda.index", $_SESSION);
     }
 
     /**
@@ -31,19 +35,28 @@ class AgendaController extends Controller
     /**
      * Store a newly created resource in storage.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-
     public function store(Request $request)
     {   
+        if(!isset($_SESSION))
+            session_start(); 
+
         $novo = array(
             'id' => date("YmdHis"),
-            'nome' => $request->nome,
-            'telefone' => $request->telefone,
-            'email' => $request->email
+            'nome'   => $request['nome'],
+            'telefone'     => $request['telefone'],
+            'email' => $request['email'],
         );
-
-        $request->session()->put('0', $novo);
+        //$tam = count($_SESSION['usuario']);
+        //return var_dump($novo) + $tam;
+        if (isset($_SESSION['usuario']))
+            array_push($_SESSION['usuario'],$novo);
+        else
+            $_SESSION['usuario'][0] = $novo;
+        return redirect()->route('agenda.index');
+        
     }
 
     /**
@@ -52,10 +65,18 @@ class AgendaController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show(Request $request, $id)
+    public function show($id)
     {   
-        $valor = $request->session()->has($id);
-        return $valor;
+         
+        if (!isset($_SESSION)) {
+            session_start();
+        }
+        foreach ($_SESSION['usuario'] as $dados) {
+            if ($dados['id'] == $id) {
+                return view('agenda.show', ['dados' => $dados]);
+                break;
+            }
+        }
     }
 
     /**
@@ -66,26 +87,42 @@ class AgendaController extends Controller
      */
     public function edit($id)
     {
-        return view("agenda.edit");
+        if (!isset($_SESSION)) {
+            session_start();
+        }
+        foreach ($_SESSION['usuario'] as $dados) {
+            if ($dados['id'] == $id) {
+                //var_dump($dados);
+                return view('agenda.edit', ['dados' => $dados]);
+                break;
+            }
+        }
+
     }
 
     /**
      * Update the specified resource in storage.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request)
+    public function update(Request $request, $id)
     {   
-        $novo = array(
-            'id' => date("YmdHis"),
-            'nome' => $request->nome,
-            'telefone' => $request->telefone,
-            'email' => $request->email
-        );
+        if (!isset($_SESSION)) {
+            session_start();
+        }
 
-        $request->session()->get($request->id)->set($request->id, $novo);
-        return "Update";
+        $keys = array_keys($_SESSION['usuario']);
+        foreach ($keys as $key) {
+            if ($_SESSION['usuario'][$key]['id'] == $id) {
+                $_SESSION['usuario'][$key]['nome'] = $request->nome;
+                $_SESSION['usuario'][$key]['telefone'] = $request->telefone;
+                $_SESSION['usuario'][$key]['email'] = $request->email;
+                break;
+            }
+        }
+        return redirect()->route('agenda.index');
     }
 
     /**
@@ -94,9 +131,17 @@ class AgendaController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Request $request, $id)
+    public function destroy($id)
     {
-        $request->session()->forget($id);
-        return "Destroy";
+        if(!isset($_SESSION))
+            session_start(); 
+            $keys = array_keys($_SESSION['usuario']);
+            foreach ($keys as $key) {
+                if ($_SESSION['usuario'][$key]['id'] == $id){
+                    unset($_SESSION['usuario'][$key]);
+                    break;
+                }
+            }
+        return redirect()->route('agenda.index');
     }
 }
